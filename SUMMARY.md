@@ -2,18 +2,16 @@
 
 **Date**: 2025-11-29
 
-## 🏗️ Modularization Completed
+## 🚀 Deployment Completed
 
-- **Refactoring**: Converted single scripts into a structured package (`src/`).
-- **New Structure**:
-  - `src/crawler.py`: Reservation checking logic.
-  - `src/notifier.py`: Telegram notification logic.
-  - `src/config.py`: Configuration management.
-  - `src/utils.py`: Helper functions.
-  - `main.py`: Unified entry point with CLI support.
-- **Backup**: Original files backed up in `backup_original/`.
+- **Repository**: [tennis-reservation-check](https://github.com/dltkdwns0730/tennis-reservation-check.git)
+- **Latest Update**:
+  - **Feature**: Compact output format for better readability on mobile.
+  - **Docs**: Added `TELEGRAM_GUIDE.md` for bot setup.
+  - **Structure**: Modularized code (`src/` package).
 
 ## ℹ️ Usage
 
+- Clone: `git clone https://github.com/dltkdwns0730/tennis-reservation-check.git`
+- Install: `pip install -r requirements.txt`
 - Run: `python main.py`
-- Run with args: `python main.py 자유 호계`

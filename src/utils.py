@@ -46,12 +46,10 @@ def parse_court_ids(input_str):
 def format_matrix_summary(all_results):
     """
     여러 코트의 예약 결과를 날짜별 매트릭스 형태의 문자열로 반환 (19시 이후만)
-    all_results: { '코트이름': weekly_data_list, ... }
+    Compact Version: 불필요한 줄바꿈을 줄이고 텍스트를 단축함.
     """
     lines = []
-    lines.append(f"{'='*30}")
-    lines.append(f"🌙 통합 야간(19시~) 예약 현황")
-    lines.append(f"{'='*30}")
+    lines.append(f"🌙 야간(19시~) 예약 현황")
 
     # 1. 날짜별로 데이터 재구성
     dates_map = {}
@@ -61,7 +59,15 @@ def format_matrix_summary(all_results):
             continue
             
         for day_data in weekly_data:
-            date_key = f"{day_data['date']} ({day_data['day_of_week'][:3]})"
+            # 날짜 포맷 단축: "2025-11-29" -> "11/29"
+            date_obj = day_data['date'] # 문자열임
+            try:
+                # YYYY-MM-DD -> MM/DD
+                short_date = date_obj[5:].replace('-', '/')
+            except:
+                short_date = date_obj
+
+            date_key = f"{short_date} ({day_data['day_of_week'][:3]})"
             
             if date_key not in dates_map:
                 dates_map[date_key] = {}
@@ -76,31 +82,44 @@ def format_matrix_summary(all_results):
                     try:
                         start_h = int(time_slot.split(':')[0])
                         if start_h >= 19:
-                            simple_time = time_slot.split('~')[0].strip()
+                            # "21:00" -> "21"
+                            simple_time = time_slot.split(':')[0].strip()
                             evening_times.append(simple_time)
                     except:
                         pass
                 
                 if evening_times:
-                    dates_map[date_key][court_name].append(f"{c_num} | {', '.join(evening_times)}")
+                    # c_num: "1 코트" -> "1번"
+                    simple_num = c_num.replace('코트', '').strip() + "번"
+                    # "1번(21)" 형태
+                    dates_map[date_key][court_name].append(f"{simple_num}({','.join(evening_times)})")
 
     # 2. 문자열 생성
     sorted_dates = sorted(dates_map.keys())
+    has_any_data = False
     
     for date_str in sorted_dates:
-        lines.append(f"\n📅 {date_str}")
-        lines.append("-" * 30)
-        
-        has_data_in_date = False
+        # 해당 날짜에 데이터가 있는지 확인
+        day_lines = []
+        has_evening_in_day = False
         
         for court_name, slots_list in dates_map[date_str].items():
             if slots_list:
-                has_data_in_date = True
-                lines.append(f"[{court_name}]")
-                for slot_str in slots_list:
-                    lines.append(f"  └ {slot_str}")
+                has_evening_in_day = True
+                # 코트 이름 단축 (안양종합운동장 -> 안양종합)
+                short_name = court_name.replace('안양', '').replace('공원', '').replace('테니스장', '').strip()
+                if short_name == '종합운동장': short_name = '종합'
+                
+                # 한 줄로 합치기: "🏟️ 자유: 1번(21), 2번(20,21)"
+                day_lines.append(f" 🏟️ {short_name}: {', '.join(slots_list)}")
         
-        if not has_data_in_date:
-            lines.append("  (예약 가능한 야간 시간대 없음)")
+        # 데이터가 있는 날만 출력
+        if has_evening_in_day:
+            has_any_data = True
+            lines.append(f"\n📅 {date_str}")
+            lines.extend(day_lines)
+            
+    if not has_any_data:
+        lines.append("\n(예약 가능한 야간 시간대 없음 😭)")
             
     return "\n".join(lines)

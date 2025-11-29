@@ -31,6 +31,11 @@
    TARGET_COURTS=3,5
    ```
 
+## 📱 Telegram Notification Setup
+
+텔레그램 알림을 받으려면 봇 설정이 필요합니다.
+👉 **[텔레그램 연동 가이드 보러가기](TELEGRAM_GUIDE.md)**
+
 ## 🏃 Usage
 
 **기본 실행 (설정 파일 기준)**
