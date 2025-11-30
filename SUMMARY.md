@@ -1,17 +1,19 @@
-# 📝 Project Status Summary
+# Workflow Update Summary: Tennis Court Check with UV
 
-**Date**: 2025-11-29
+## Overview
 
-## 🚀 Deployment Completed
+Updated the `tennis_court_check` workflow to utilize `uv` for faster dependency installation. This ensures that the environment is always consistent without incurring the performance penalty of standard `pip` installs.
 
-- **Repository**: [tennis-reservation-check](https://github.com/dltkdwns0730/tennis-reservation-check.git)
-- **Latest Update**:
-  - **Feature**: Compact output format for better readability on mobile.
-  - **Docs**: Added `TELEGRAM_GUIDE.md` for bot setup.
-  - **Structure**: Modularized code (`src/` package).
+## Changes
 
-## ℹ️ Usage
+- **File**: `.agent/workflows/automation/tennis_court_check.md`
+- **Modification**: Added `uv pip install -r requirements.txt` to the execution block.
 
-- Clone: `git clone https://github.com/dltkdwns0730/tennis-reservation-check.git`
-- Install: `pip install -r requirements.txt`
-- Run: `python main.py`
+## Verification
+
+- Verified file content after modification.
+- Confirmed `uv` is installed and available in the environment (checked in previous steps).
+
+## Next Steps
+
+- The user can now run `@[/tennis_court_check]` and expect auto-installation of dependencies.
