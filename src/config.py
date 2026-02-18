@@ -1,6 +1,6 @@
-"""Intent: Define environment-backed configuration for reservation monitoring.
-Used by: CLI, crawler, notifier, and utility modules that import shared constants.
-Flow: Load .env variables, derive defaults, and expose constant settings."""
+"""Intent: 예약 모니터링을 위한 환경 변수 기반 구성을 정의합니다.
+Used by: 공통 상수를 임포트하는 CLI, 크롤러, 알림, 유틸리티 모듈.
+Flow: .env 변수 로드, 기본값 도출, 상수 설정 노출."""
 
 import os
 
