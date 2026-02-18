@@ -1,3 +1,3 @@
-"""Intent: Initialize the tennis reservation checker package namespace.
-Used by: Python import system and modules importing from src.
-Flow: Expose package boundary without additional runtime behavior."""
+"""Intent: 테니스 예약 확인 패키지 네임스페이스를 초기화합니다.
+Used by: 파이썬 import 시스템 및 src에서 임포트하는 모듈.
+Flow: 추가 런타임 동작 없이 패키지 경계를 노출."""
