@@ -1,17 +1,17 @@
-"""Intent: Provide helper utilities for court selection and summary formatting.
-Used by: CLI workflow that parses court inputs and builds notification text.
-Flow: Normalize court identifiers and render weekly availability into a compact evening matrix."""
+"""Intent: 코트 선택 및 요약 포맷팅을 위한 헬퍼 유틸리티를 제공합니다.
+Used by: 코트 입력을 파싱하고 알림 텍스트를 생성하는 CLI 워크플로우.
+Flow: 코트 식별자를 정규화하고 주간 가용성을 간결한 야간 매트릭스로 렌더링."""
 
 from .config import COURT_NAME_MAP
 
 
 def parse_court_ids(input_str):
-    """Caller: Called by CLI argument handling in main.py.
-    Purpose: Convert user-provided court names or IDs into normalized numeric court IDs.
-    Returns: list of unique sorted court IDs.
-    Deps: src.config.COURT_NAME_MAP for valid ID range context.
-    Args: input_str: comma-separated string or list of CLI tokens.
-    Note: Supports synonym matching and ignores unknown values."""
+    """Caller: main.py의 CLI 인수 처리에서 호출됨.
+    Purpose: 사용자 제공 코트 이름 또는 ID를 정규화된 숫자 코트 ID로 변환.
+    Returns: 고유하고 정렬된 코트 ID 목록.
+    Deps: 유효한 ID 범위 컨텍스트를 위한 src.config.COURT_NAME_MAP.
+    Args: input_str: 쉼표로 구분된 문자열 또는 CLI 토큰 목록.
+    Note: 동의어 매칭을 지원하며 알 수 없는 값은 무시함."""
     if not input_str:
         return []
 
@@ -52,74 +52,4 @@ def parse_court_ids(input_str):
     return sorted(list(set(target_ids)))
 
 
-def format_matrix_summary(all_results):
-    """Caller: Called after crawling completes to prepare notification output.
-    Purpose: Build a compact date-by-court summary of evening reservation availability.
-    Returns: str formatted summary text.
-    Deps: None.
-    Args: all_results: mapping of court name to collected weekly reservation data.
-    Note: Filters to times starting at 19:00 or later and omits days with no evening slots."""
-    lines = []
-    lines.append("🌙 야간(19시~) 예약 현황")
 
-    dates_map = {}
-
-    for court_name, weekly_data in all_results.items():
-        if not weekly_data:
-            continue
-
-        for day_data in weekly_data:
-            date_obj = day_data["date"]
-            try:
-                short_date = date_obj[5:].replace("-", "/")
-            except:
-                short_date = date_obj
-
-            date_key = f"{short_date} ({day_data['day_of_week'][:3]})"
-
-            if date_key not in dates_map:
-                dates_map[date_key] = {}
-
-            if court_name not in dates_map[date_key]:
-                dates_map[date_key][court_name] = []
-
-            for c_num, c_data in day_data["courts"].items():
-                evening_times = []
-                for time_slot in c_data["available_times"]:
-                    try:
-                        start_h = int(time_slot.split(":")[0])
-                        if start_h >= 19:
-                            simple_time = time_slot.split(":")[0].strip()
-                            evening_times.append(simple_time)
-                    except:
-                        pass
-
-                if evening_times:
-                    simple_num = c_num.replace("코트", "").strip() + "번"
-                    dates_map[date_key][court_name].append(f"{simple_num}({','.join(evening_times)})")
-
-    sorted_dates = sorted(dates_map.keys())
-    has_any_data = False
-
-    for date_str in sorted_dates:
-        day_lines = []
-        has_evening_in_day = False
-
-        for court_name, slots_list in dates_map[date_str].items():
-            if slots_list:
-                has_evening_in_day = True
-                short_name = court_name.replace("안양", "").replace("공원", "").replace("테니스장", "").strip()
-                if short_name == "종합운동장":
-                    short_name = "종합"
-
-                day_lines.append(f" 🏟️ {short_name}: {', '.join(slots_list)}")
-
-        if has_evening_in_day:
-            has_any_data = True
-            lines.append(f"\n📅 {date_str}")
-            lines.extend(day_lines)
-
-    if not has_any_data:
-        lines.append("\n(예약 가능한 야간 시간대 없음 😭)")
-
-    return "\n".join(lines)
