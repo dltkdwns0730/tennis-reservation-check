@@ -1,6 +1,6 @@
-"""Intent: Crawl court reservation pages and collect daily availability snapshots.
-Used by: main.py workflow that checks weekly reservations for selected courts.
-Flow: Start a headless browser, navigate per date, parse reservation tables, and return structured weekly data."""
+"""Intent: 코트 예약 페이지를 크롤링하고 일일 가용성 스냅샷을 수집합니다.
+Used by: 선택된 코트의 주간 예약을 확인하는 main.py 워크플로우.
+Flow: 헤드리스 브라우저 시작, 날짜별 탐색, 예약 테이블 파싱, 구조화된 주간 데이터 반환."""
 
 import io
 import json
@@ -15,20 +15,21 @@ from selenium.webdriver.common.by import By
 from webdriver_manager.chrome import ChromeDriverManager
 
 from .config import COURT_NAME_MAP, HOME_URL
+from .parser import ReservationParser
 
 
 class WeeklyReservationChecker:
-    """Purpose: Fetch weekly reservation availability for a single tennis court target.
-    Context: Instantiated per court ID by CLI orchestration in main.py.
-    Attrs: home_url: reservation site URL; court_id: target court identifier; days: number of days to inspect; court_names: ID-to-name map; driver: Selenium driver instance; weekly_data: accumulated crawl results."""
+    """Purpose: 단일 테니스 코트 타겟에 대한 주간 예약 가용성을 가져옴.
+    Context: main.py의 CLI 오케스트레이션에 의해 코트 ID별로 인스턴스화됨.
+    Attrs: home_url: 예약 사이트 URL; court_id: 타겟 코트 식별자; days: 검사할 일수; court_names: ID-이름 매핑; driver: Selenium 드라이버 인스턴스; weekly_data: 축적된 크롤링 결과."""
 
     def __init__(self, court_id=3, days=7):
-        """Caller: Called when creating a checker instance in the monitoring loop.
-        Purpose: Initialize crawl target settings and runtime state containers.
+        """Caller: 모니터링 루프에서 체커 인스턴스 생성 시 호출됨.
+        Purpose: 크롤링 타겟 설정 및 런타임 상태 컨테이너 초기화.
         Returns: None.
-        Deps: src.config.HOME_URL and src.config.COURT_NAME_MAP.
-        Args: court_id: target court number; days: number of days to inspect.
-        Note: weekly_data starts empty and is populated by check_weekly."""
+        Deps: src.config.HOME_URL 및 src.config.COURT_NAME_MAP.
+        Args: court_id: 타겟 코트 번호; days: 검사할 일수.
+        Note: weekly_data는 비어있는 상태로 시작하며 check_weekly에 의해 채워짐."""
         self.home_url = HOME_URL
         self.court_id = court_id
         self.days = days
@@ -37,12 +38,12 @@ class WeeklyReservationChecker:
         self.weekly_data = []
 
     def setup_driver(self):
-        """Caller: Called internally before any page navigation.
-        Purpose: Configure and launch a headless Chrome WebDriver instance.
+        """Caller: 페이지 탐색 전 내부적으로 호출됨.
+        Purpose: 헤드리스 Chrome WebDriver 인스턴스 구성 및 실행.
         Returns: None.
         Deps: selenium.webdriver; webdriver_manager.chrome.
         Args: None.
-        Note: Uses low-noise headless options for unattended execution."""
+        Note: 무인 실행을 위해 노이즈가 적은 헤드리스 옵션 사용."""
         chrome_options = Options()
         chrome_options.add_argument("--no-sandbox")
         chrome_options.add_argument("--disable-dev-shm-usage")
@@ -55,12 +56,12 @@ class WeeklyReservationChecker:
         self.driver = webdriver.Chrome(service=service, options=chrome_options)
 
     def navigate_to_court(self):
-        """Caller: Invoked by check_weekly after driver setup.
-        Purpose: Open the home page and click through to the configured court page.
-        Returns: bool indicating whether court page navigation succeeded.
-        Deps: Selenium WebDriver DOM queries and script execution.
+        """Caller: 드라이버 설정 후 check_weekly에 의해 호출됨.
+        Purpose: 홈 페이지를 열고 구성된 코트 페이지로 클릭하여 이동.
+        Returns: 코트 페이지 탐색 성공 여부를 나타내는 불리언 값.
+        Deps: Selenium WebDriver DOM 쿼리 및 스크립트 실행.
         Args: None.
-        Note: Matches both visible link text and expected daily-path pattern for safety."""
+        Note: 안전을 위해 보이는 링크 텍스트와 예상 일일 경로 패턴을 모두 일치시킴."""
         try:
             court_name = self.court_names.get(self.court_id, "자유공원 테니스코트")
             self.driver.get(self.home_url)
@@ -81,12 +82,12 @@ class WeeklyReservationChecker:
             return False
 
     def navigate_to_date(self, target_date):
-        """Caller: Called for each day offset in check_weekly.
-        Purpose: Move the browser to a specific court/date page and verify page data alignment.
-        Returns: bool indicating whether the target date page loaded correctly.
-        Deps: Selenium WebDriver DOM queries and script execution.
-        Args: target_date: datetime value representing the date to inspect.
-        Note: Confirms date by inspecting table input metadata after navigation."""
+        """Caller: check_weekly에서 각 날짜 오프셋마다 호출됨.
+        Purpose: 브라우저를 특정 코트/날짜 페이지로 이동하고 페이지 데이터 정렬 확인.
+        Returns: 타겟 날짜 페이지 로드 성공 여부를 나타내는 불리언 값.
+        Deps: Selenium WebDriver DOM 쿼리 및 스크립트 실행.
+        Args: target_date: 검사할 날짜를 나타내는 datetime 값.
+        Note: 탐색 후 테이블 입력 메타데이터를 검사하여 날짜 확인."""
         try:
             date_str = target_date.strftime("%Y-%m-%d")
             url = f"/daily/{self.court_id}/{date_str}"
@@ -114,12 +115,12 @@ class WeeklyReservationChecker:
             return False
 
     def extract_reservation_data(self):
-        """Caller: Called after successful date navigation for data extraction.
-        Purpose: Parse time slots and per-court availability from the current page.
-        Returns: dict of parsed reservation data or None on extraction failure.
-        Deps: Selenium WebDriver table parsing helpers; analyze_cell; determine_status.
+        """Caller: 데이터 추출을 위해 성공적인 날짜 탐색 후 호출됨.
+        Purpose: 현재 페이지에서 시간 슬롯 및 코트별 가용성 파싱.
+        Returns: 파싱된 예약 데이터 딕셔너리 또는 추출 실패 시 None.
+        Deps: Selenium WebDriver 테이블 파싱 헬퍼; analyze_cell; determine_status.
         Args: None.
-        Note: Builds per-court slot metadata and a derived list of available times."""
+        Note: 코트별 슬롯 메타데이터와 파생된 가용 시간 목록을 생성."""
         try:
             time.sleep(2)
             time_tables = self.driver.find_elements(By.CSS_SELECTOR, "table.custom")
@@ -157,8 +158,9 @@ class WeeklyReservationChecker:
                         continue
 
                     cell = cells[0]
-                    cell_info = self.analyze_cell(cell)
-                    status, reason = self.determine_status(cell_info)
+                    # Use extracted parser logic
+                    cell_info = ReservationParser.analyze_cell(cell)
+                    status, reason = ReservationParser.determine_status(cell_info)
 
                     slots_info.append({"time": time_slot, "status": status, "reason": reason})
                     if status == "available":
@@ -174,71 +176,15 @@ class WeeklyReservationChecker:
             print(f"  데이터 추출 오류: {e}")
             return None
 
-    def analyze_cell(self, cell):
-        """Caller: Called by extract_reservation_data for each reservation cell.
-        Purpose: Inspect checkbox/icon state to collect raw occupancy indicators.
-        Returns: dict containing checkbox/icon visibility and content flags.
-        Deps: Selenium WebElement APIs.
-        Args: cell: table cell WebElement containing reservation controls.
-        Note: Uses tolerant parsing to handle minor DOM differences without aborting extraction."""
-        info = {
-            "checkbox_exists": False,
-            "checkbox_disabled": False,
-            "checkbox_title": "",
-            "icon_visible": False,
-            "icon_text": "",
-            "has_content": False,
-        }
-        try:
-            try:
-                checkbox = cell.find_element(By.TAG_NAME, "input")
-                info["checkbox_exists"] = True
-                info["checkbox_disabled"] = not checkbox.is_enabled()
-                info["checkbox_title"] = checkbox.get_attribute("title") or ""
-            except:
-                pass
-            try:
-                icons = cell.find_elements(By.TAG_NAME, "i")
-                for icon in icons:
-                    if icon.is_displayed():
-                        info["icon_visible"] = True
-                        icon_text = icon.text.strip()
-                        if icon_text:
-                            info["icon_text"] += icon_text + " "
-                        if icon.get_attribute("innerHTML").strip():
-                            info["has_content"] = True
-            except:
-                pass
-        except:
-            pass
-        return info
 
-    def determine_status(self, cell_info):
-        """Caller: Used by extract_reservation_data after analyze_cell.
-        Purpose: Translate raw cell indicators into business-level reservation status.
-        Returns: tuple of (status, reason) strings.
-        Deps: None.
-        Args: cell_info: parsed cell indicator dictionary from analyze_cell.
-        Note: Prioritizes explicit unavailable/reserved markers before availability inference."""
-        if cell_info["checkbox_title"] == "예약불가":
-            return "unavailable", "예약불가"
-        if cell_info["icon_visible"] or cell_info["has_content"]:
-            reason = cell_info["icon_text"].strip() if cell_info["icon_text"] else ""
-            return "reserved", reason
-        if cell_info["checkbox_exists"] and not cell_info["checkbox_disabled"]:
-            if not cell_info["icon_visible"] and not cell_info["has_content"]:
-                return "available", ""
-        if cell_info["checkbox_disabled"]:
-            return "unavailable", cell_info["checkbox_title"]
-        return "unknown", ""
 
     def check_weekly(self):
-        """Caller: Triggered from main monitoring loop per target court.
-        Purpose: Execute end-to-end weekly crawl and return per-day reservation data.
-        Returns: list of day-level reservation dictionaries or None on fatal failure.
-        Deps: Selenium driver lifecycle; navigate_to_court; navigate_to_date; extract_reservation_data.
+        """Caller: 타겟 코트별 메인 모니터링 루프에서 트리거됨.
+        Purpose: 엔드투엔드 주간 크롤링 실행 및 일별 예약 데이터 반환.
+        Returns: 일별 예약 딕셔너리 목록 또는 치명적 실패 시 None.
+        Deps: Selenium 드라이버 라이프사이클; navigate_to_court; navigate_to_date; extract_reservation_data.
         Args: None.
-        Note: Always attempts to close the browser driver in the finally block."""
+        Note: finally 블록에서 브라우저 드라이버 종료를 항상 시도함."""
         try:
             self.setup_driver()
 
